@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <conio.h>
-
+#include <queue>
 #define PUZZLE_SIZE 9
 #define ROW_SIZE 3
 #define TOP 0
@@ -28,10 +28,13 @@ class puzzle
 public:
 	puzzle();
 	vector <square> sList;
+	vector <uint8_t> solvedP;
+
 	void printPuzzle();
 	bool edgeMatch(uint8_t pos, const square * s);
 	bool neighborMatch(uint8_t pos, const square * s);
 
+	bool makePuzzle(vector <uint8_t> foundList, uint8_t puzzlePos);
 };
 
 int main()
@@ -40,10 +43,12 @@ int main()
 	
 	p.printPuzzle();
 
+	p.solvedP[0] = 6;
+
 	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
 	{
 		cout << "\nSquare " << (int) i << "\n";
-		p.edgeMatch(6, &p.sList[i]);
+		p.neighborMatch(1, &p.sList[i]);
 	}
 	
 
@@ -83,6 +88,8 @@ square::square()
 }
 puzzle::puzzle()
 {
+	solvedP.resize(PUZZLE_SIZE);
+
 	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
 	{
 		square newSquare;
@@ -179,7 +186,7 @@ bool puzzle::neighborMatch(uint8_t pos, const square * s)
 	//Top neighbor
 	if(pos > ROW_SIZE)
 	{
-		if (s->sides[TOP] != sList[pos - ROW_SIZE].sides[BOT])
+		if (s->sides[TOP] != sList[solvedP[pos - ROW_SIZE]].sides[BOT])
 		{
 			cout << "Top neighbor was not a match \n";
 			return false;
@@ -189,33 +196,64 @@ bool puzzle::neighborMatch(uint8_t pos, const square * s)
 	//Left neighbor
 	if((pos % ROW_SIZE) != 0)
 	{
-		if (s->sides[LEFT] != sList[pos - 1].sides[RIGHT])
+		if (s->sides[LEFT] != sList[solvedP[pos - 1]].sides[RIGHT])
 		{
-			cout << "Top neighbor was not a match \n";
-			return false;
-		}
-	}
-
-	//Bot neighbor
-	if(pos >= PUZZLE_SIZE - ROW_SIZE)
-	{
-		if (s->sides[BOT] != sList[pos + ROW_SIZE].sides[TOP])
-		{
-			cout << "Top neighbor was not a match \n";
-			return false;
-		}
-	}
-
-	//Right neighbor
-	if(((pos + 1) % ROW_SIZE) == 0)
-	{
-		if(s->sides[RIGHT] != sList[pos + 1].sides[LEFT])
-		{
-			cout << "Top neighbor was not a match \n";
+			cout << "left neighbor was not a match \n";
 			return false;
 		}
 	}
 }
+
+bool isUsed(const vector <uint8_t> foundList, uint8_t squareNumber)
+{
+	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
+	{
+		if (foundList[i] == squareNumber)
+			return true;
+	}
+	return false;
+}
+
+
+bool puzzle::makePuzzle(vector <uint8_t> foundList, uint8_t puzzlePos)
+{
+
+	queue<square> q;
+	bool matchFound = false;
+
+	//Fill up the queue with valid moves
+	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
+	{
+		if (edgeMatch(puzzlePos, &sList[i]) && (neighborMatch(puzzlePos, &sList[i]) && !(isUsed(foundList, i))));
+		{
+			cout << "Square: " << i << " is a match at puzzle position:  " << puzzlePos << "\n";
+			matchFound = true;
+			q.push(sList[i]);
+		}
+	}
+
+	if (!matchFound)
+		return false;
+	/*
+	use neighbor and edge to queue all possible next pieces based on Puzzle pos. 
+
+	while queue is non-empty:
+		popFront of queue, call self with new foundlist(plus new square) and puzzlePos +1.
+
+	If no matches are found, return false.
+
+
+	if puzzle pos is == to size call print Answer and end
+	
+	How to clear as we move back on a fail?
+	*/
+}
+
+
+
+
+
+
 
 /*
 Find all valid squares for a position place them in queue. 
