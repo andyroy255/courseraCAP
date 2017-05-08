@@ -20,7 +20,7 @@ public:
 	square();
 	void printSquare();
 	vector <string> sides;
-
+	uint8_t squareNumber;
 };
 
 class puzzle
@@ -29,8 +29,9 @@ public:
 	puzzle();
 	vector <square> sList;
 	vector <uint8_t> solvedP;
-
+	bool complete;
 	void printPuzzle();
+	void printAnswer();
 	bool edgeMatch(uint8_t pos, const square * s);
 	bool neighborMatch(uint8_t pos, const square * s);
 
@@ -41,17 +42,19 @@ int main()
 {
 	puzzle p;
 	
-	p.printPuzzle();
+//	p.printPuzzle();
 
-	p.solvedP[0] = 6;
 
-	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
-	{
-		cout << "\nSquare " << (int) i << "\n";
-		p.neighborMatch(1, &p.sList[i]);
-	}
+	vector<uint8_t> fList;
 	
+	uint8_t pPos = 0;
 
+	cout << "\n\n";
+
+	p.makePuzzle(fList, pPos);
+	
+	cout << "\n\n";
+	p.printAnswer();
 	getch();
     return 0;
 }
@@ -88,11 +91,13 @@ square::square()
 }
 puzzle::puzzle()
 {
+	complete = false;
 	solvedP.resize(PUZZLE_SIZE);
 
 	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
 	{
 		square newSquare;
+		newSquare.squareNumber = i;
 		sList.push_back(newSquare);
 	}
 	return;
@@ -117,10 +122,20 @@ void puzzle::printPuzzle()
 	}
 }
 
-
+void puzzle::printAnswer()
+{
+	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
+	{
+		cout << "(" << sList[solvedP[i]].sides[TOP] << "," << sList[solvedP[i]].sides[LEFT] << "," << sList[solvedP[i]].sides[BOT] << "," << sList[solvedP[i]].sides[RIGHT] << ")";
+		
+		if ((i + 1) % ROW_SIZE == 0)
+			cout << "\n";
+		else
+			cout << ";";
+	}
+}
 bool puzzle::edgeMatch(uint8_t pos, const square * s)
 {
-	
 	bool isEdge = false;
 	//Top Check
 	if(pos < ROW_SIZE)
@@ -171,12 +186,12 @@ bool puzzle::edgeMatch(uint8_t pos, const square * s)
 			return false;
 		}
 	}
-
+/*
 	if(isEdge)
 		cout << "Square and pos are matching edges\n";
 	else
 		cout << "Square and pos are both not edges\n";
-
+*/
 	return true;
 }
 
@@ -184,11 +199,11 @@ bool puzzle::edgeMatch(uint8_t pos, const square * s)
 bool puzzle::neighborMatch(uint8_t pos, const square * s)
 {
 	//Top neighbor
-	if(pos > ROW_SIZE)
+	if(pos >= ROW_SIZE)
 	{
 		if (s->sides[TOP] != sList[solvedP[pos - ROW_SIZE]].sides[BOT])
 		{
-			cout << "Top neighbor was not a match \n";
+//			cout << "Top neighbor was not a match \n";
 			return false;
 		}
 	}
@@ -198,15 +213,17 @@ bool puzzle::neighborMatch(uint8_t pos, const square * s)
 	{
 		if (s->sides[LEFT] != sList[solvedP[pos - 1]].sides[RIGHT])
 		{
-			cout << "left neighbor was not a match \n";
+//			cout << "left neighbor was not a match \n";
 			return false;
 		}
 	}
+
+	return true;
 }
 
 bool isUsed(const vector <uint8_t> foundList, uint8_t squareNumber)
 {
-	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
+	for (uint8_t i = 0; i < foundList.size(); i++)
 	{
 		if (foundList[i] == squareNumber)
 			return true;
@@ -217,36 +234,48 @@ bool isUsed(const vector <uint8_t> foundList, uint8_t squareNumber)
 
 bool puzzle::makePuzzle(vector <uint8_t> foundList, uint8_t puzzlePos)
 {
+//	cout << "Entering makePuzzle foundList size is: " << (int)foundList.size() << " puzzlePoz is: " << (int)puzzlePos << "\n";
+	if (complete == true)
+		return true;
 
+	
 	queue<square> q;
 	bool matchFound = false;
 
 	//Fill up the queue with valid moves
 	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
 	{
-		if (edgeMatch(puzzlePos, &sList[i]) && (neighborMatch(puzzlePos, &sList[i]) && !(isUsed(foundList, i))));
+		if ((edgeMatch(puzzlePos, &sList[i]) && neighborMatch(puzzlePos, &sList[i])) && (!isUsed(foundList, i)))
 		{
-			cout << "Square: " << i << " is a match at puzzle position:  " << puzzlePos << "\n";
+	//		cout << "Square: " << (int)i << " is a match at puzzle position:  " << (int)puzzlePos << "\n";
 			matchFound = true;
 			q.push(sList[i]);
+
+			//Check for last one should move out of loop if too slow
+			if (puzzlePos == PUZZLE_SIZE - 2)
+			{
+				complete = true;
+				solvedP[PUZZLE_SIZE - 1] = i;
+				return true;
+			}
 		}
 	}
 
 	if (!matchFound)
 		return false;
-	/*
-	use neighbor and edge to queue all possible next pieces based on Puzzle pos. 
 
-	while queue is non-empty:
-		popFront of queue, call self with new foundlist(plus new square) and puzzlePos +1.
+	while (!q.empty() && !complete)
+	{
+//		cout << "Before pop q size is: " << q.size() << "\n";
+		square poppedSquare = q.front();
+		q.pop();
 
-	If no matches are found, return false.
+		solvedP[puzzlePos] = poppedSquare.squareNumber;
+		vector<uint8_t> newFoundList = foundList;
+		makePuzzle(newFoundList, puzzlePos + 1);
+	}
 
-
-	if puzzle pos is == to size call print Answer and end
-	
-	How to clear as we move back on a fail?
-	*/
+	return true;
 }
 
 
