@@ -1,11 +1,13 @@
+
 #include "stdafx.h"
 #include <iostream>
 #include <vector>
 #include <string>
 #include <conio.h>
+#include <queue>
 
-#define PUZZLE_SIZE 9
-#define ROW_SIZE 3
+#define PUZZLE_SIZE 25
+#define ROW_SIZE 5
 #define TOP 0
 #define LEFT 1
 #define BOT 2
@@ -19,7 +21,7 @@ public:
 	square();
 	void printSquare();
 	vector <string> sides;
-
+	uint8_t squareNumber;
 };
 
 class puzzle
@@ -27,25 +29,31 @@ class puzzle
 public:
 	puzzle();
 	vector <square> sList;
+	vector <uint8_t> solvedP;
+	bool complete;
 	void printPuzzle();
+	void printAnswer();
 	bool edgeMatch(uint8_t pos, const square * s);
 	bool neighborMatch(uint8_t pos, const square * s);
 
+	bool makePuzzle(vector <uint8_t> foundList, uint8_t puzzlePos);
 };
 
 int main()
 {
 	puzzle p;
 
-	p.printPuzzle();
-
-	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
-	{
-		cout << "\nSquare " << (int)i << "\n";
-		p.edgeMatch(6, &p.sList[i]);
-	}
+	//p.printPuzzle();
 
 
+	vector<uint8_t> fList;
+
+	uint8_t pPos = 0;
+
+	p.makePuzzle(fList, pPos);
+
+	cout << "\n\n";
+	p.printAnswer();
 	getch();
 	return 0;
 }
@@ -82,9 +90,13 @@ square::square()
 }
 puzzle::puzzle()
 {
+	complete = false;
+	solvedP.resize(PUZZLE_SIZE);
+
 	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
 	{
 		square newSquare;
+		newSquare.squareNumber = i;
 		sList.push_back(newSquare);
 	}
 	return;
@@ -109,10 +121,20 @@ void puzzle::printPuzzle()
 	}
 }
 
+void puzzle::printAnswer()
+{
+	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
+	{
+		cout << "(" << sList[solvedP[i]].sides[TOP] << "," << sList[solvedP[i]].sides[LEFT] << "," << sList[solvedP[i]].sides[BOT] << "," << sList[solvedP[i]].sides[RIGHT] << ")";
 
+		//if ((i + 1) % ROW_SIZE == 0)
+		cout << " " << (int)sList[solvedP[i]].squareNumber << " \n";
+		//else
+		//	cout << ";";
+	}
+}
 bool puzzle::edgeMatch(uint8_t pos, const square * s)
 {
-
 	bool isEdge = false;
 	//Top Check
 	if (pos < ROW_SIZE)
@@ -126,6 +148,9 @@ bool puzzle::edgeMatch(uint8_t pos, const square * s)
 			return false;
 		}
 	}
+	else if (s->sides[TOP] == "black")
+		return false;
+
 	//Left Check
 	if ((pos % ROW_SIZE) == 0)
 	{
@@ -138,6 +163,8 @@ bool puzzle::edgeMatch(uint8_t pos, const square * s)
 			return false;
 		}
 	}
+	else if (s->sides[LEFT] == "black")
+		return false;
 
 	//Bot Check
 	if (pos >= PUZZLE_SIZE - ROW_SIZE)
@@ -151,6 +178,9 @@ bool puzzle::edgeMatch(uint8_t pos, const square * s)
 			return false;
 		}
 	}
+	else if (s->sides[BOT] == "black")
+		return false;
+
 	//Right Check
 	if (((pos + 1) % ROW_SIZE) == 0)
 	{
@@ -163,12 +193,14 @@ bool puzzle::edgeMatch(uint8_t pos, const square * s)
 			return false;
 		}
 	}
-
-	if (isEdge)
-		cout << "Square and pos are matching edges\n";
+	else if (s->sides[RIGHT] == "black")
+		return false;
+	/*
+	if(isEdge)
+	cout << "Square and pos are matching edges\n";
 	else
-		cout << "Square and pos are both not edges\n";
-
+	cout << "Square and pos are both not edges\n";
+	*/
 	return true;
 }
 
@@ -176,11 +208,11 @@ bool puzzle::edgeMatch(uint8_t pos, const square * s)
 bool puzzle::neighborMatch(uint8_t pos, const square * s)
 {
 	//Top neighbor
-	if (pos > ROW_SIZE)
+	if (pos >= ROW_SIZE)
 	{
-		if (s->sides[TOP] != sList[pos - ROW_SIZE].sides[BOT])
+		if (s->sides[TOP] != sList[solvedP[pos - ROW_SIZE]].sides[BOT])
 		{
-			cout << "Top neighbor was not a match \n";
+			//			cout << "Top neighbor was not a match \n";
 			return false;
 		}
 	}
@@ -188,67 +220,188 @@ bool puzzle::neighborMatch(uint8_t pos, const square * s)
 	//Left neighbor
 	if ((pos % ROW_SIZE) != 0)
 	{
-		if (s->sides[LEFT] != sList[pos - 1].sides[RIGHT])
+		if (s->sides[LEFT] != sList[solvedP[pos - 1]].sides[RIGHT])
 		{
-			cout << "Top neighbor was not a match \n";
+			//			cout << "left neighbor was not a match \n";
 			return false;
 		}
 	}
 
-	//Bot neighbor
-	if (pos >= PUZZLE_SIZE - ROW_SIZE)
-	{
-		if (s->sides[BOT] != sList[pos + ROW_SIZE].sides[TOP])
-		{
-			cout << "Top neighbor was not a match \n";
-			return false;
-		}
-	}
-
-	//Right neighbor
-	if (((pos + 1) % ROW_SIZE) == 0)
-	{
-		if (s->sides[RIGHT] != sList[pos + 1].sides[LEFT])
-		{
-			cout << "Top neighbor was not a match \n";
-			return false;
-		}
-	}
+	return true;
 }
 
+bool isUsed(const vector <uint8_t> foundList, uint8_t squareNumber)
+{
+	for (uint8_t i = 0; i < foundList.size(); i++)
+	{
+		if (foundList[i] == squareNumber)
+		{
+			cout << "Blocked from foundlist\n";
+			return true;
+		}
+	}
+	return false;
+}
+
+
+bool puzzle::makePuzzle(vector <uint8_t> foundList, uint8_t puzzlePos)
+{
+	cout << "\nEntering makePuzzle foundList size is: " << (int)foundList.size() << " puzzlePos is: " << (int)puzzlePos << "\n";
+
+	if (complete == true)
+	{
+		cout << "Cmplete from start\n";
+		return true;
+	}
+
+
+	queue<square> q;
+	bool matchFound = false;
+
+	//Fill up the queue with valid moves
+	for (uint8_t i = 0; i < PUZZLE_SIZE; i++)
+	{
+
+		if (puzzlePos == 8)
+		{
+			if (!edgeMatch(puzzlePos, &sList[i]))
+				cout << "Failed Edge match: " << (int)i << "\n";
+
+			if (!neighborMatch(puzzlePos, &sList[i]))
+				cout << "Failed n match: " << (int)i << "\n";
+
+			if (isUsed(foundList, i))
+				cout << "Failed found match: " << (int)i << "\n";
+		}
+
+
+
+		if ((edgeMatch(puzzlePos, &sList[i]) && neighborMatch(puzzlePos, &sList[i])) && (!isUsed(foundList, i)))
+		{
+			cout << "Square: " << (int)i << " is a match at puzzle position:  " << (int)puzzlePos << "\n";
+			matchFound = true;
+			q.push(sList[i]);
+
+			//Check for last one should move out of loop if too slow
+			if (puzzlePos == PUZZLE_SIZE - 2)
+			{
+				cout << "COMPLETE\n\n";
+				complete = true;
+				solvedP[PUZZLE_SIZE - 1] = i;
+				return true;
+			}
+		}
+	}
+
+	if (!matchFound)
+	{
+		cout << "No matches found returning false\n";
+		return false;
+	}
+
+	while (!q.empty() && !complete)
+	{
+		cout << "Before pop q size is: " << q.size() << "\n";
+		square poppedSquare = q.front();
+		q.pop();
+
+		solvedP[puzzlePos] = poppedSquare.squareNumber;
+
+		vector<uint8_t> newFoundList = foundList;
+		newFoundList.push_back(poppedSquare.squareNumber);
+
+		makePuzzle(newFoundList, puzzlePos + 1);
+	}
+	return true;
+}
+
+
+
+
+
+
+
 /*
-Find all valid squares for a position place them in queue.
-Pop first square, repeat,
-if puzzle completes print out answer.
 
-If puzzle does not complete delete findings (how)
-Pop next square repeat
 
-Data:
-Found list
-Puzzle array
+Failed case #1/1: Wrong answer
+Your pieces were not the same set of pieces as the original input.
 
-Could pass a vector of found and a vector of puzzle each time.
+['(black,black,blue,cyan)', '(black,brown,maroon,red)', '(black,cyan,yellow,brown)', '(black,red,green,black)', '(black,red,white,red)',
+'(black,red,white,red)', '(blue,black,orange,yellow)', '(blue,cyan,white,black)', '(brown,maroon,orange,yellow)', '(green,blue,blue,black)',
+'(maroon,black,yellow,purple)', '(maroon,blue,black,orange)', '(maroon,orange,brown,orange)', '(maroon,yellow,white,cyan)', '(orange,black,maroon,cyan)',
+'(orange,purple,maroon,cyan)', '(orange,purple,purple,purple)', '(purple,brown,black,blue)', '(red,orange,black,orange)', '(white,cyan,red,orange)',
+'(white,orange,maroon,blue)', '(white,orange,orange,black)', '(yellow,black,black,brown)', '(yellow,cyan,orange,maroon)', '(yellow,yellow,yellow,orange)']
 
-nieghborCheck
+['(black,black,blue,cyan)', '(black,brown,maroon,red)', '(black,cyan,yellow,brown)', '(black,red,green,black)', '(black,red,white,red)',
+'(blue,black,orange,yellow)', '(blue,cyan,white,black)', '(brown,maroon,orange,yellow)', '(green,blue,blue,black)', '(maroon,black,yellow,purple)',
+'(maroon,blue,black,orange)', '(maroon,orange,brown,orange)', '(maroon,yellow,white,cyan)', '(orange,black,maroon,cyan)', '(orange,orange,black,black)',
+'(orange,purple,maroon,cyan)', '(orange,purple,purple,purple)', '(purple,brown,black,blue)', '(red,orange,black,orange)', '(white,cyan,red,orange)',
+'(white,orange,maroon,blue)', '(white,orange,orange,black)', '(yellow,black,black,brown)', '(yellow,cyan,orange,maroon)', '(yellow,yellow,yellow,orange)']
 
-Based on position check
-compare
-
-check if edge
-top: - Row size
-right + 1
-left  - 1
-bottom + row size
+5 blue,black,orange,yellow)'
+14 orange,orange,black,black)',
 
 
 
 
-0 1 2 3 4
-5 6 7 8 9
-1011121314
+(black,black,blue,cyan)
+(black,brown,maroon,red)
+(black,cyan,yellow,brown)
+(black,red,green,black)
+(black,red,white,red)
+(blue,black,orange,yellow)
+(blue,cyan,white,black)
+(brown,maroon,orange,yellow)
+(green,blue,blue,black)
+(maroon,black,yellow,purple)
+(maroon,blue,black,orange)
+(maroon,orange,brown,orange)
+(maroon,yellow,white,cyan)
+(orange,black,maroon,cyan)
+(orange,orange,black,black)
+(orange,purple,maroon,cyan)
+(orange,purple,purple,purple)
+(purple,brown,black,blue)
+(red,orange,black,orange)
+(white,cyan,red,orange)
+(white,orange,maroon,blue)
+(white,orange,orange,black)
+(yellow,black,black,brown)
+(yellow,cyan,orange,maroon)
+(yellow,yellow,yellow,orange)
 
 
+
+
+
+(black,black,blue,cyan)
+(black,brown,maroon,red)
+(black,cyan,yellow,brown)
+(black,red,green,black)
+(black,red,white,red)
+(blue,black,orange,yellow)
+(blue,cyan,white,black)
+(brown,maroon,orange,yellow)
+(green,blue,blue,black)
+(maroon,black,yellow,purple)
+(maroon,blue,black,orange)
+(maroon,orange,brown,orange)
+(maroon,yellow,white,cyan)
+(orange,black,maroon,cyan)
+(orange,orange,black,black)
+(orange,purple,maroon,cyan)
+(orange,purple,purple,purple)
+(purple,brown,black,blue)
+(red,orange,black,orange)
+
+(white,cyan,red,orange)
+(white,orange,maroon,blue)
+(white,orange,orange,black)
+
+(yellow,black,black,brown)
+(yellow,cyan,orange,maroon)
+(yellow,yellow,yellow,orange)
 
 
 */
