@@ -1,3 +1,0 @@
-/*
-Code created for test purposes in school. Not meant for release.
-*/
